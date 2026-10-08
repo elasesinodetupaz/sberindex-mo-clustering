@@ -1,0 +1,9 @@
+.venv/
+data/raw/
+.DS_Store
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+*.log
+# решение Дарьи 08.10.2026: очищенная выборка расстояний из connection.parquet (СберИндекс); шаг 07 создаёт её заново из data/raw
+data/processed/connection_valid.parquet

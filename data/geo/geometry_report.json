@@ -1,0 +1,401 @@
+{
+ "active_year_to": 9999,
+ "area_change_threshold": 0.1,
+ "cities": {
+  "area_change_gt_threshold_all": 0,
+  "area_change_gt_threshold_sample": 0,
+  "area_change_ids_not_sample": [],
+  "area_change_ids_sample": [],
+  "bytes": 468420,
+  "bytes_gzip9": 105517,
+  "coverage_invalid_edge_polygons_simplified": 0,
+  "coverage_is_valid_simplified": true,
+  "empty_polygons": 0,
+  "file": "mo_cities.geojson",
+  "gap_max_deg": 0.00039496744760997066,
+  "gap_p95_deg": 9.96410027818004e-06,
+  "holes_after": 1,
+  "holes_before": 1,
+  "invalid_after": [],
+  "is_valid_original_invalid": 0,
+  "is_valid_simplified_invalid": 0,
+  "lost_parts": [],
+  "lost_parts_large": 0,
+  "lost_parts_small": 0,
+  "max_abs_area_change_sample": 0.00452287664711457,
+  "moscow_polygons": 146,
+  "neighbour_pairs": 612,
+  "neighbour_pairs_both_in_sample": 581,
+  "overlap_pairs_measured_via_make_valid": 0,
+  "overlap_pairs_simplified": 0,
+  "pairs_gap_gt_threshold": 0,
+  "pairs_gap_gt_threshold_both_in_sample": 0,
+  "pairs_with_empty_geometry": 0,
+  "parts_after": 283,
+  "parts_before": 283,
+  "polygons": 257,
+  "polygons_with_fewer_holes": 0,
+  "polygons_with_fewer_parts": 0,
+  "sample_polygons": 242,
+  "sha256": "44f6a9b5e1922348ec5e016fd882a5e451af6e8da5a48aa90af6ba381c7d97f4",
+  "spb_polygons": 111,
+  "vertices": 19127,
+  "vertices_original": 76656
+ },
+ "cities_decimals": 5,
+ "cities_tolerance_deg": 0.0005,
+ "controls": [
+  {
+   "expect": 2594,
+   "got": 2594,
+   "name": "действующих полигонов",
+   "ok": true
+  },
+  {
+   "expect": 2004,
+   "got": 2004,
+   "name": "МО выборки среди действующих",
+   "ok": true
+  },
+  {
+   "expect": 25,
+   "got": 25,
+   "name": "пар с перекрытием в исходном покрытии",
+   "ok": true
+  },
+  {
+   "expect": "не более 10",
+   "got": 5,
+   "name": "mo_national: МО выборки с |ΔS| выше порога",
+   "ok": true
+  },
+  {
+   "expect": 0,
+   "got": 0,
+   "name": "mo_cities: МО с |ΔS| выше порога",
+   "ok": true
+  },
+  {
+   "expect": 0,
+   "got": 0,
+   "name": "mo_cities: пар с перекрытием после упрощения",
+   "ok": true
+  },
+  {
+   "expect": 0,
+   "got": 0,
+   "name": "mo_national: потеряно частей площадью не менее 1e-08 град²",
+   "ok": true
+  },
+  {
+   "expect": 0,
+   "got": 0,
+   "name": "mo_cities: потеряно частей площадью не менее 1e-08 град²",
+   "ok": true
+  },
+  {
+   "expect": "не более 12582912",
+   "got": 10029388,
+   "name": "размер mo_national.geojson, байт",
+   "ok": true
+  }
+ ],
+ "data_download_date": "04.10.2026",
+ "gap_sample_per_pair": 300,
+ "gap_seed": 0,
+ "gap_threshold_deg": 0.001,
+ "inputs": {
+  "archive_sha256_expected": "319ed22684b77716641bc15b61f7325adc44e9fc47e9be2973d88412d27d21f5",
+  "gpkg_sha256": "e62027630d48e4a13f9b6d173dd074d7358706743fe859ca3b7fa30fefa9813a",
+  "labels_sha256": "46cf888d54ec9c6c8ca148f001f867b9408727257d9c98f6240fbe36aa60b22e",
+  "territories_sha256": "a489f1d8c948d6cba6d4404292a1937d0d1da40a0df958a25aacdb8cbb56d675",
+  "xlsx_sha256": "4150658c3298fbc87ed79838f503f3a5b9a28da33257ff803c7d9231ddb775d6"
+ },
+ "max_lost_part_area_deg2": 1e-08,
+ "national": {
+  "area_change_gt_threshold_all": 5,
+  "area_change_gt_threshold_sample": 5,
+  "area_change_ids_not_sample": [],
+  "area_change_ids_sample": [
+   2354,
+   2440,
+   2461,
+   2517,
+   2535
+  ],
+  "bytes": 10029388,
+  "bytes_gzip9": 2877122,
+  "coverage_invalid_edge_polygons_simplified": 29,
+  "coverage_is_valid_simplified": false,
+  "empty_polygons": 0,
+  "file": "mo_national.geojson",
+  "gap_max_deg": 0.012143639722795472,
+  "gap_p95_deg": 0.00039073615627355446,
+  "holes_after": 422,
+  "holes_before": 422,
+  "invalid_after": [
+   {
+    "explain_validity": "Self-intersection(46.6800315436242 43.8893644295302)",
+    "name": "городской округ город Кизляр",
+    "territory_id": 114
+   },
+   {
+    "explain_validity": "Self-intersection(46.6800315436242 43.8893644295302)",
+    "name": "Кизлярский муниципальный район",
+    "territory_id": 134
+   },
+   {
+    "explain_validity": "Ring Self-intersection(52.5572 55.6831)",
+    "name": "городской округ город Набережные Челны",
+    "territory_id": 355
+   },
+   {
+    "explain_validity": "Ring Self-intersection(52.5572 55.6831)",
+    "name": "Тукаевский муниципальный район",
+    "territory_id": 394
+   },
+   {
+    "explain_validity": "Self-intersection(87.2375757446809 53.8305106382979)",
+    "name": "городской округ Новокузнецкий",
+    "territory_id": 1233
+   },
+   {
+    "explain_validity": "Self-intersection(87.2375757446809 53.8305106382979)",
+    "name": "Новокузнецкий муниципальный округ",
+    "territory_id": 1247
+   },
+   {
+    "explain_validity": "Self-intersection(39.8478631810491 54.7187936717428)",
+    "name": "городской округ город Рязань",
+    "territory_id": 1845
+   },
+   {
+    "explain_validity": "Self-intersection(39.8478631810491 54.7187936717428)",
+    "name": "Рязанский муниципальный район",
+    "territory_id": 1863
+   },
+   {
+    "explain_validity": "Self-intersection(77.3782262548391 65.9976332046335)",
+    "name": "городской округ город Новый Уренгой",
+    "territory_id": 2242
+   },
+   {
+    "explain_validity": "Self-intersection(77.3782262548391 65.9976332046335)",
+    "name": "муниципальный округ Пуровский район",
+    "territory_id": 2882
+   }
+  ],
+  "is_valid_original_invalid": 0,
+  "is_valid_simplified_invalid": 10,
+  "lost_parts": [
+   {
+    "lost": [
+     {
+      "area_deg2": 4.775185000917142e-09,
+      "area_m2": 34.128512541235914,
+      "large": false
+     }
+    ],
+    "name": "Алеутский муниципальный округ",
+    "parts_after_rounding": 49,
+    "parts_after_simplify": 50,
+    "parts_before": 50,
+    "territory_id": 610
+   },
+   {
+    "lost": [
+     {
+      "area_deg2": 6.713299999638354e-09,
+      "area_m2": 60.96256268294807,
+      "large": false
+     }
+    ],
+    "name": "городской округ ЗАТО Фокино",
+    "parts_after_rounding": 4,
+    "parts_after_simplify": 5,
+    "parts_before": 5,
+    "territory_id": 786
+   }
+  ],
+  "lost_parts_large": 0,
+  "lost_parts_small": 2,
+  "max_abs_area_change_sample": 0.12772631395060544,
+  "neighbour_pairs": 6941,
+  "neighbour_pairs_both_in_sample": 4931,
+  "overlap_pairs_measured_via_make_valid": 13,
+  "overlap_pairs_simplified": 17,
+  "pairs_gap_gt_threshold": 180,
+  "pairs_gap_gt_threshold_both_in_sample": 131,
+  "pairs_with_empty_geometry": 0,
+  "parts_after": 3147,
+  "parts_before": 3149,
+  "polygons": 2594,
+  "polygons_with_fewer_holes": 0,
+  "polygons_with_fewer_parts": 2,
+  "sample_polygons": 2004,
+  "sha256": "ea9a19cd73c682e17fa3429888069b1fd28dd39e22b010750f9240948bc319e2",
+  "vertices": 517617,
+  "vertices_original": 4397717
+ },
+ "national_decimals": 4,
+ "national_tolerance_deg": 0.005,
+ "original": {
+  "active_polygons": 2594,
+  "coverage_invalid_edge_ids": [
+   167,
+   190,
+   193,
+   354,
+   371,
+   485,
+   899,
+   903,
+   1001,
+   1051,
+   1206,
+   1279,
+   1446,
+   1453,
+   1459,
+   1473,
+   1488,
+   1632,
+   1652,
+   1913,
+   1923,
+   1930,
+   1932,
+   1935,
+   1948,
+   2081,
+   2088,
+   2092,
+   2121,
+   2652,
+   2883,
+   2887,
+   3008,
+   3010,
+   3014
+  ],
+  "coverage_invalid_edge_polygons": 35,
+  "coverage_is_valid": false,
+  "is_valid_invalid": 0,
+  "not_sample_polygons": 590,
+  "overlap_pair_ids": [
+   [
+    167,
+    178
+   ],
+   [
+    182,
+    190
+   ],
+   [
+    190,
+    193
+   ],
+   [
+    354,
+    371
+   ],
+   [
+    485,
+    490
+   ],
+   [
+    899,
+    903
+   ],
+   [
+    903,
+    1051
+   ],
+   [
+    903,
+    1279
+   ],
+   [
+    1001,
+    3014
+   ],
+   [
+    1206,
+    1473
+   ],
+   [
+    1446,
+    2883
+   ],
+   [
+    1453,
+    3008
+   ],
+   [
+    1459,
+    3008
+   ],
+   [
+    1488,
+    3014
+   ],
+   [
+    1632,
+    1652
+   ],
+   [
+    1913,
+    1932
+   ],
+   [
+    1923,
+    2887
+   ],
+   [
+    1930,
+    2887
+   ],
+   [
+    1935,
+    2887
+   ],
+   [
+    1948,
+    2887
+   ],
+   [
+    2081,
+    3010
+   ],
+   [
+    2088,
+    3010
+   ],
+   [
+    2092,
+    3010
+   ],
+   [
+    2121,
+    2883
+   ],
+   [
+    2652,
+    3014
+   ]
+  ],
+  "overlap_pairs": 25,
+  "overlap_pairs_both_in_sample": 13,
+  "overlap_pairs_with_not_sample": 12,
+  "sample_polygons": 2004,
+  "vertices": 4397717
+ },
+ "overlap_min_area_deg2": 1e-12,
+ "snapshot_month": "2024-12",
+ "source_url": "https://sberindex.ru/ru/research/dataset-borders-and-changes-of-municipalities",
+ "versions": {
+  "geos": "3.13.1",
+  "numpy": "2.5.3",
+  "shapely": "2.1.2"
+ }
+}

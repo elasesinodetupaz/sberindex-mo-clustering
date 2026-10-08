@@ -1,0 +1,925 @@
+# Гиперпараметры пайплайна — единый источник значений.
+# src/config.py читает этот файл и отдаёт шагам те же имена (MONTH, FINAL_K, ROBUST_* …).
+# Ключи внутри групп совпадают с именами в src/config.py.
+# Диапазоны заданы как {min, max} включительно; список k собирается в src/config.py.
+# Пути к данным и к справочнику МО здесь не задаются (они в самих скриптах).
+
+# --- Данные и период ---
+data:
+  MONTH: "2024-12"                    # канонический месяц (декабрь 2024)
+
+# --- Кластеризация ---
+# k = 7 было каноническим до решения от 2026-09-28; заменено на k = 6 по результатам
+# prediction strength (шаг 10d) и воспроизводимости транспортной группы (шаги 10d, 12, 12a).
+clustering:
+  FINAL_K: 6                          # каноническое число кластеров KMeans
+  SUPERSEDED_K: 7                     # прежнее каноническое k (для сравнения)
+
+# --- Сети ---
+networks:
+  ECON_KNN_K: 8                       # kNN экономической сети (шаги 05, 06, 08, 11, 13; шаг 14 — ROBUST_KNN_K в src/config.py)
+  ROBUST_KNN_VARIANTS: [5, 8, 12]     # чувствительность Louvain к числу соседей (шаг 14, п. 4)
+
+# --- Устойчивость ---
+robustness:
+  # Шаг 14: проверки устойчивости выбора k
+  ROBUST_N_RUNS: 100                  # запусков KMeans для «лучшего по inertia» разбиения (п. 1)
+  ROBUST_K_COMPARE: [6, 7]            # сравнение PS для вариантов признаков (п. 1)
+  ROBUST_K_RANGE: {min: 2, max: 10}   # k для проверки по месяцам (п. 2)
+  ROBUST_PS_SPLITS: 50                # M разбиений на половины для prediction strength (пп. 1–3)
+  ROBUST_N_RANDOM: 100                # случайных разбиений для baseline S_Dbw (п. 2)
+  ROBUST_SE_MULT: 2.0                 # «разница больше 2 SE» (п. 2)
+  ROBUST_DECOMP_K: [4, 5, 6, 7, 8]    # k для разложения PS (п. 3)
+  ROBUST_LOUVAIN_RESOLUTIONS: [0.3, 0.5, 0.7, 1.0, 1.5]   # п. 4
+  ROBUST_LOUVAIN_SEEDS: 20            # запусков Louvain на каждое значение (п. 4)
+  ROBUST_GAP_REFS: 50                 # эталонных выборок для gap statistic (п. 5)
+  ROBUST_GAP_K_RANGE: {min: 2, max: 10}
+
+  # Шаг 15: проверки устойчивости, батч 2
+  ROBUST2_VARIANTS: ["A", "B", "C"]   # A — 5 долей от «Все категории» (канон); B — к сумме пяти; C — A + «прочее»
+  ROBUST2_K: 6                        # k для сравнения вариантов признаков
+  ROBUST2_K_RANGE: [4, 5, 6, 7, 8]    # k для SW, CH/N, PS по вариантам
+  ROBUST2_N_RUNS: 100                 # «лучший из N запусков» по inertia
+  ROBUST2_GROUP_JACCARD: 0.6          # группа «находится» в месяце, если есть кластер с Жаккаром ≥ порога
+  ROBUST2_REMOTE_CLUSTER: 4           # удалённая группа: номер кластера k = 6 из шага 10b; при смене k перевыбрать
+  ROBUST2_CAPITAL_CLUSTER: 3          # столичная группа: номер кластера k = 6 из шага 10b; при смене k перевыбрать
+  ROBUST2_COMPARE_TOL: 0.1            # расхождение с ручными расчётами автора, которое отмечается
+  ROBUST2_CONTINGENCY: [[4, 6], [5, 6], [6, 7]]   # таблицы сопряжённости по k (п. 2); пары → tuple в src/config.py
+  ROBUST2_TARGET_K: 6                 # «K около 6» для Louvain (п. 3)
+  ROBUST2_EXTRA_RESOLUTIONS: [0.25]   # подобрано перебором 0.10–0.25: лучший запуск даёт ровно K = 6
+
+  # Шаг 15e: внешняя валидность вариантов признаков и выбора k
+  EXTVAL_KS: [4, 5, 6, 7, 8]          # k варианта A (официальные метки шага 12a)
+  EXTVAL_PERMUTATIONS: 200            # перестановок меток для z-оценки доли рёбер внутри кластеров
+  EXTVAL_SEED: 1515                   # rng для перестановок
+  EXTVAL_ALPHA: 0.05                  # уровень значимости для критерия Уилкоксона
+
+# --- Отслеживание во времени ---
+temporal:
+  # Шаг 16: кривая стабильности по k
+  STABILITY_KS: [4, 5, 6, 7, 8]       # k, для которых строится кривая (шаги 10b, 12a, 12 считаются для всех; 15f)
+  KINK_RATIO: 1.5                     # «излом» на 6→7: |Δ(6→7)| ≥ KINK_RATIO × max(|Δ(5→6)|, |Δ(7→8)|)
+
+# --- Шаг 04: сеть на сырых долях (отклонённый вариант, для сравнения) ---
+step04_raw_network:
+  RAW_NET_EDGE_THRESHOLD: 0.9         # ребро, если cosine similarity сырых долей > порога
+  RAW_NET_CANDIDATE_THRESHOLDS: [0.9, 0.95, 0.97, 0.98, 0.99, 0.995, 0.999]   # пороги для таблицы «порог → размер сети»
+
+# --- Шаг 07: транспортные сети ---
+step07_transport:
+  TRANSPORT_KNN_K: 8                  # kNN транспортных сетей; совпадает с ECON_KNN_K по значению, но это отдельный параметр
+  TRANSPORT_SYMMETRY_TOL_KM: 0.5      # допустимое расхождение distance между x→y и y→x (км)
+  TRANSPORT_IMPUTE_MISSING_RAILWAY_ZERO: true   # достраивать отсутствующие railway-пары внутри ж/д-сети с distance = 0
+  TRANSPORT_NAMES_CHECK_KM: 50        # достроенные пары с highway distance не меньше порога (км) проверяются через названия
+  TRANSPORT_DETOUR_RATIO: 3.0         # порог отношения «дорога / прямая» (типично для пар 30–100 км: медиана 1.24, p99 2.13)
+
+# --- Шаг 08: экономическая vs транспортная близость ---
+step08_econ_vs_transport:
+  ECON_TRANSPORT_MONTHS: ["2024-12", "2023-01"]   # месяцы анализа (первый совпадает с MONTH, второй — начало периода)
+  ECON_TRANSPORT_TOP_SIMILARITY_SHARE: 0.10       # топ-10% рёбер экономической сети по similarity
+  ECON_TRANSPORT_FAR_MIN_KM: 200      # «похожие, но далеко»: дальше порога сходство перестаёт зависеть от расстояния
+  ECON_TRANSPORT_CLUSTER_KM: [600, 800]      # кластер пар на ~700 км (пара → tuple в src/config.py)
+  ECON_TRANSPORT_CLUSTER_MA_LOW: [350, 450]  # границы market_access для выделения в отчёте (→ tuple)
+  ECON_TRANSPORT_CLUSTER_MA_HIGH: [550, 700] # (→ tuple)
+
+# --- Шаг 10: выбор k для KMeans ---
+step10_kmeans:
+  KMEANS_K_RANGE: {min: 2, max: 15}   # k = 2..15 (→ range в src/config.py)
+  KMEANS_RANDOM_STATE: 42
+  KMEANS_N_INIT: 10
+  SDBW_KW: {method: Halkidi, centr: mean, nearest_centr: true, metric: euclidean}   # параметры пакета s-dbw
+  SDBW_N_RANDOM: 100                  # случайных разбиений для baseline S_Dbw
+  SDBW_BASELINE_SEED: 2025            # rng seed = SDBW_BASELINE_SEED + k
+  SDBW_N_BOOT: 2000                   # бутстреп по случайным разбиениям — 95% ДИ для S_Dbw norm
+
+# --- Шаг 10d: prediction strength ---
+step10d_prediction_strength:
+  PS_M_SPLITS: 50                     # как параметр M в fpc::prediction.strength
+  PS_SPLIT_SEED: 2005
+  PS_THRESHOLDS: [0.8, 0.9]           # пороги из Tibshirani & Walther (2005); шаги 10c и 10d
+
+# --- Шаг 10c: фиксация k, проверка плоского минимума ---
+step10c_final:
+  NEAR_MIN_INERTIA: 0.5               # «плоский минимум»: запуски с inertia ≤ min + 0.5
+  SAME_PARTITION_ARI: 0.999           # запуски с ARI ≥ порога считаются одним и тем же разбиением
+  # seed канонического разбиения совпадает с random_state шага 10: CANONICAL_SEED = KMEANS_RANDOM_STATE в src/config.py
+
+# --- Шаг 11: Louvain (предварительный запуск) ---
+step11_louvain:
+  LOUVAIN_WEIGHT: "similarity"        # атрибут веса рёбер (шаги 11, 11b, 13, 15c)
+  LOUVAIN_RESOLUTION: 1.0
+  LOUVAIN_SEED: 42
+  LOUVAIN_STABILITY_SEEDS: {min: 0, max: 9}   # проверка чувствительности Louvain к seed (→ range)
+
+# --- Шаг 11b: устойчивость Louvain ---
+step11b_louvain_stability:
+  LOUVAIN_SEEDS: {min: 0, max: 99}    # 100 запусков (→ range)
+  LOUVAIN_N_RANDOM_PAIRS: 30          # непересекающиеся пары запусков для «типичного» ARI
+  LOUVAIN_PAIRS_RNG_SEED: 2024        # воспроизводимый выбор пар
+
+# --- Шаг 11c: ядра сообществ Louvain ---
+step11c_louvain_core:
+  LOUVAIN_CORE_THRESHOLD: 0.8         # МО — «ядро» сообщества, если его средняя co с сообществом ≥ порога
+
+# --- Шаг 12a: 100 запусков KMeans на месяц ---
+step12a_runs:
+  KMEANS_RUN_SEEDS: {min: 0, max: 99} # seed 0..99 (→ range); официальное разбиение — минимальная inertia
+
+# --- Шаг 12: сопоставление кластеров во времени ---
+# якорный месяц — MONTH (группа data)
+step12_temporal:
+  # уверенность сопоставления: margin = (расстояние до ближайшего конкурента) / (расстояние до сопоставленного)
+  CONFIDENT_MARGIN: 1.5               # уверенно: взаимно ближайшие и margin ≥ 1.5
+  AMBIGUOUS_MARGIN: 1.2               # неоднозначно: не взаимно ближайшие или margin < 1.2
+  CONFIDENT_SHARE_MIN: 0.5            # кластер «слабо устойчив во времени», если уверенных месяцев < 50%
+  PROBLEM_MONTH_MIN_AMBIGUOUS: 2      # проблемный месяц: ≥ 2 неоднозначных сопоставлений ...
+  PROBLEM_SWITCH_IQR: 1.5             # ... или доля смен выше Q3 + 1.5·IQR
+  PERIOD_WINDOW: 6                    # окно (мес.) для доминирующего кластера
+  STABLE_MIN_MONTHS: 2                # смена «устойчивая», если новый кластер держится ≥ 2 мес. подряд
+  MIN_CONF_MONTHS_IN_WINDOW: 3        # (в) с фильтром: окно учитывается, если уверенных месяцев ≥ 3 из 6
+  CONF_THRESHOLD: 0.7                 # уверенность принадлежности МО (шаг 12a): основной порог
+  CONF_THRESHOLDS: [0.5, 0.6, 0.7, 0.8, 0.9]   # пороги для таблицы чувствительности
+  BORDERLINE_CONF: 0.5                # «пограничное» МО: уверенность < 0.5 ...
+  BORDERLINE_MIN_SHARE: 0.5           # ... более чем в половине месяцев
+  TEMPORAL_THRESHOLD: 0.6             # «пограничные во времени»: доля месяцев в основном кластере ниже порога
+  TEMPORAL_THRESHOLDS: [0.5, 0.6, 0.7]
+  SWING_TOP2_MIN: 0.8                 # «качающиеся»: ≥ 80% месяцев в двух самых частых кластерах
+  SWING_TOP2_ALT: [0.7, 0.8, 0.9]
+  CENTROID_SPACE: "zscore"            # пространство центроидов для сопоставления: raw / raw_centered / zscore
+  TREND_CONFOUND_ABS_CORR: 0.7        # |corr(медианное расстояние до якоря, номер месяца)| выше порога → тренд доминирует
+
+# --- Шаг 13: Louvain по месяцам ---
+step13_louvain_monthly:
+  LOUVAIN_MONTHLY_N_SEEDS: 20
+  NEST_PURITY: 0.8                    # сообщество «вложено», если ≥ 80% его МО — в одном кластере KMeans
+  TYPICAL_Z: 2.0                      # «картина декабря типична», если в пределах TYPICAL_Z ст. откл. от среднего по месяцам
+
+# --- Шаг 15d: gap statistic ---
+step15d_gap:
+  GAP_SEED: 2001
+
+# --- Шаг 17: извлечение данных Росстата (БД ПМО) для проверки гипотез ---
+# коды показателей и условия отбора строк — в самом скрипте src/17_rosstat_extract.py
+step17_rosstat:
+  ROSSTAT_POP_YEARS: [2023, 2024, 2025]     # население и возраст (на 1 января)
+  ROSSTAT_LABOUR_YEARS: [2023, 2024]        # зарплата и численность работников (январь–декабрь)
+  ROSSTAT_CHUNKSIZE: 1000000                # строк csv за одно чтение из архива
+  ROSSTAT_ANOMALY_SHARE_TOL: 0.05           # anomaly: |сумма трёх возрастных долей − 1| > 0.05
+
+# --- Шаг 18a: пороги для гипотез Г1–Г4, Г7, Г8 (предрегистрация; шаг 19 их использует) ---
+# Источники переменных (source): market_access — data/raw/market_access.parquet (log);
+# railway — data/processed/railway_degree.parquet; rosstat — data/external/rosstat_mo_2023_2025.parquet
+# (МО-годы с anomaly исключаются); shares — data/processed/category_shares.parquet, period: month —
+# месяц разбиения (для канонического декабрьского — 2024-12), mean2024 — среднее за 12 месяцев 2024;
+# health_resid — ранги доли минус линейная регрессия на ранги share_older года older_year.
+# column со звёздочкой (share_okved_*) раскрывается в разделы A–S.
+step18_thresholds:
+  ALPHA: 0.05                         # уровень для p по декабрьскому разбиению
+  MONTHS_RULE: 23                     # «подтверждено»: ещё и obs_m > p95_m не менее чем в 23 из 24 месяцев
+  N_PERM: 5000                        # перестановок в нулевом распределении
+  MIN_GROUP: 5                        # тип с меньшим числом МО с данными исключается из теста переменной
+  HYP_MIN_TYPES: 3                    # меньше 3 оставшихся типов → «не оценивается»
+  HYP_MIN_REGION_N: 3                 # регион с меньшим числом МО с данными не участвует в уровне «внутри регионов»
+  HYP_SEED: 180000                    # seed комбинации = HYP_SEED + её номер в таблице порогов
+  HYP_PERM_BATCH: 500                 # перестановок в одном батче
+  HYP_CONTROL_SEED: 18                # отрицательные контроли: генерация переменных и их нулей
+  HYP_NEG1_N_VARS: 500                # отрицательный контроль №1: независимые N(0,1)
+  HYP_NEG2_N_VARS: 200                # отрицательный контроль №2: a_region + e
+  HYP_NEG_MAX_SHARE: 0.07             # допустимая доля «подтверждено» у отрицательных контролей
+  HYP_POSITIVE_CONTROLS: [share_Общепит, share_Транспорт]
+  HYP_KW_VARIABLES:                   # переменные Краскела–Уоллиса по типам
+    - {hypothesis: Г1, variable: log_market_access, source: market_access, transform: log, variant: основной}
+    - {hypothesis: Г1, variable: has_railway, source: railway, column: has_railway, variant: основной}
+    - {hypothesis: Г4, variable: "share_okved_*_2023", source: rosstat, column: "share_okved_*", year: 2023, variant: основной}
+    - {hypothesis: Г4, variable: "share_okved_*_2024", source: rosstat, column: "share_okved_*", year: 2024, variant: чувствительность}
+    - {hypothesis: Г7, variable: share_health, source: shares, column: share_Здоровье, period: month, variant: основной}
+    - {hypothesis: Г7, variable: share_health_mean2024, source: shares, column: share_Здоровье, period: mean2024, variant: чувствительность}
+    - {hypothesis: Г7, variable: share_health_resid_older2023, source: health_resid, column: share_Здоровье, period: month, older_year: 2023, variant: основной}
+    - {hypothesis: Г7, variable: share_health_resid_older2024, source: health_resid, column: share_Здоровье, period: month, older_year: 2024, variant: чувствительность}
+    - {hypothesis: Г8, variable: log_population_2023, source: rosstat, column: population, year: 2023, transform: log, variant: основной}
+    - {hypothesis: Г8, variable: log_population_2024, source: rosstat, column: population, year: 2024, transform: log, variant: чувствительность}
+  HYP_CORR_PAIRS:                     # пары Спирмена (МО-уровень, не зависят от разбиения)
+    - {hypothesis: Г2, variable: "share_Маркетплейсы~log_market_access", sign: "+", variant: основной, exclude_federal: false,
+       x: {source: shares, column: share_Маркетплейсы, period: month}, y: {source: market_access, transform: log}}
+    - {hypothesis: Г2, variable: "share_Маркетплейсы_mean2024~log_market_access", sign: "+", variant: чувствительность, exclude_federal: false,
+       x: {source: shares, column: share_Маркетплейсы, period: mean2024}, y: {source: market_access, transform: log}}
+    - {hypothesis: Г3, variable: "share_Продовольствие~wage_rel_region_2023", sign: "-", variant: основной, exclude_federal: false,
+       x: {source: shares, column: share_Продовольствие, period: month}, y: {source: rosstat, column: wage_rel_region, year: 2023}}
+    - {hypothesis: Г3, variable: "share_Продовольствие_mean2024~wage_rel_region_2023", sign: "-", variant: чувствительность, exclude_federal: false,
+       x: {source: shares, column: share_Продовольствие, period: mean2024}, y: {source: rosstat, column: wage_rel_region, year: 2023}}
+    - {hypothesis: Г3, variable: "share_Продовольствие~wage_rel_region_2023 (без городов фед. значения)", sign: "-", variant: чувствительность, exclude_federal: true,
+       x: {source: shares, column: share_Продовольствие, period: month}, y: {source: rosstat, column: wage_rel_region, year: 2023}}
+
+# --- Шаг 18b: пороги для гипотез Г6 и Г9 (предрегистрация; N_PERM — из step18_thresholds) ---
+step18b_thresholds:
+  N_NEAREST: 2                        # Г6: «ближайшие типы» — 2 типа с ближайшими центроидами (основной вариант)
+  N_NEAREST_SENS: [1, 3]              # Г6: варианты чувствительности
+  SEED_G6: 18601                      # Г6: seed нуля (случайные конечные типы)
+  SEED_G9: 18901                      # Г9: seed перестановок месяцев
+
+# --- Шаг 19a: проверка гипотез Г1, Г4, Г7, Г8 (пороги — замороженные шага 18a) ---
+step19_tests:
+  BOOT_B: 5000                        # Г7: бутстреп-повторов по МО для Δ = η²_H(доля) − η²_H(остаток)
+  SEED_G7: 19701                      # Г7: seed бутстрепа
+  SEED_G6: 19601                      # Г6 (шаг 19b): seed бутстрепа по МО (в src/config.py — TEST_SEED_G6)
+  SEED_G9: 19901                      # Г9 (шаг 19b): seed перестановок месяцев (в src/config.py — TEST_SEED_G9)
+
+# --- Шаг 20: извлечение данных о рознице и общепите (БД ПМО, раздел 2) ---
+# коды показателей и виды объектов (obroz) — в самом скрипте src/20_rosstat_retail_extract.py
+step20_retail:
+  RETAIL_YEARS: [2023, 2024]                # годы извлечения
+  RETAIL_PERIOD: "IV квартал"               # период показателя (другими периодами не заменяется)
+  RETAIL_BATCH_ROWS: 500000                 # строк parquet за одно чтение (iter_batches)
+  RETAIL_CHECK_BAND: [0.95, 1.05]           # проверка: «Магазины» / сумма 9 видов в этом диапазоне
+  RETAIL_CHECK_MAX_FLOOR_PER_1000: 5000     # проверка: МО с площадью торгового зала > 5000 м² на 1000 жителей
+
+# --- Шаг 21: пороги для дополнительных гипотез Г10–Г13 (предложение розницы и общепита; предрегистрация) ---
+# Статистики, уровни, MIN_GROUP, N_PERM, разбиения и контроли — как в шагах 18/18b (step18_thresholds).
+# Переменные предложения: column из data/external/rosstat_retail_2023_2024.parquet / население на 1 января
+# того же года (data/external/rosstat_mo_2023_2025.parquet) × 1000; МО с anomaly, населением ≤ 0 или пропуском
+# исключаются.
+step21_supply:
+  SEED_21: 21000                      # seed комбинации = SEED_21 + номер строки в таблице порогов
+  SUPPLY_VARIABLES:
+    - {name: floor_pc, column: retail_floor_m2, year: 2023}
+    - {name: seats_pc, column: catering_seats_pub, year: 2023}
+    - {name: floor_pc_2024, column: retail_floor_m2, year: 2024}
+    - {name: seats_pc_2024, column: catering_seats_pub, year: 2024}
+    - {name: stores_pc, column: retail_stores, year: 2023}
+    - {name: seats_all_pc, column: catering_seats_all, year: 2023}
+  SUPPLY_CORR_PAIRS:                  # Спирмен: основной — 24 месяца; чувствительность — только декабрь 2024
+    - {hypothesis: Г10, share: share_Маркетплейсы, supply: floor_pc, sign: "-", variant: основной}
+    - {hypothesis: Г10, share: share_Маркетплейсы, supply: floor_pc_2024, sign: "-", variant: чувствительность}
+    - {hypothesis: Г10, share: share_Маркетплейсы, supply: stores_pc, sign: "-", variant: чувствительность}
+    - {hypothesis: Г11, share: share_Общепит, supply: seats_pc, sign: "+", variant: основной}
+    - {hypothesis: Г11, share: share_Общепит, supply: seats_pc_2024, sign: "+", variant: чувствительность}
+    - {hypothesis: Г11, share: share_Общепит, supply: seats_all_pc, sign: "+", variant: чувствительность}
+  SUPPLY_KW:                          # Краскел–Уоллис на МО, где есть и доля, и переменная предложения; 25 разбиений
+    - {hypothesis: Г12, share: share_Маркетплейсы, supply: floor_pc}
+    - {hypothesis: Г13, share: share_Общепит, supply: seats_pc}
+
+# --- Шаг 22: проверка Г10–Г13 и вердикты (пороги — замороженные шага 21; BOOT_B — из step19_tests) ---
+step22_supply:
+  SEED_22: 22000                      # бутстреп Δ для Г12/Г13 и нуль разведочной частной корреляции
+
+# --- Шаг 23: портреты типов (описательный шаг: без p-значений, тестов и порогов) ---
+step23_portraits:
+  SIZE_BINS_TH: [10, 30, 100, 300]    # границы групп размера МО, тыс. жителей (население на 1 января 2023)
+  MIN_MO_REGION: 5                    # регион (или группа) с меньшим числом МО с данными не участвует
+  TOP_REGIONS: 5                      # регионов в составе типа
+  TOP_REGIONS_TYPE4: 8                # регионов в таблице типа 4
+  SMALL_TYPES: [0, 2, 5]              # «малые» типы (сравнительная таблица, возраст и здоровье)
+  CAPITAL_REGIONS: [Москва, Санкт-Петербург]
+  MOSCOW_OBLAST: Московская область
+  YAKUTIA: Республика Саха (Якутия)
+  YAKUTIA_SIZE_BINS_TH: [5, 15, 50]   # границы групп размера МО в Якутии, тыс. жителей
+  FAR_EAST_DISTRICT: Дальневосточный  # значение federal_districts.csv
+  SEED_23: 23000                      # тип 1: бутстреп разности медиан доли транспорта между соседними группами размера (BOOT_B — из step19_tests)
+  SIZE_LABEL_RATIO_LARGE: 2           # ярлык «крупнее среднего МО»: медиана населения типа ≥ 2 × медиана населения всех МО выборки
+  SIZE_LABEL_RATIO_CITY: 3            # ярлык «крупные города» (вместо предыдущего): то же с множителем 3
+  ACCESS_LABEL_RATIO_LOW: 0.5         # ярлык «низкая доступность рынков»: медиана market_access типа ≤ 0.5 × медиана всех 2004 МО
+  profile_border_margin: 0.1          # признак имени «на границе порога»: меньшее из |σ| по долям и по log(доля/«прочее») < порог подписи 10b + запас (запас задан после просмотра профилей, вне предрегистрации)
+  profile_border_label: на границе порога   # текст пометки в имени типа
+  ZERO_TOL: {median_pp: 0.1, corr: 0.02, sigma: 0.1, ratio: 0.02}   # допуски сверки: медианы (п.п.), корреляции, σ профиля, отношения
+  CONTROLS:                           # контрольные значения пользователя (расчёты до исключения двух аномальных МО)
+    type_sizes: [411, 396, 334, 319, 111, 433]
+    type_regions: [55, 64, 47, 36, 18, 49]
+    type4_far_east: 93
+    type3_groups: {Москва: 134, Санкт-Петербург: 95, Московская область: 18, прочие: 72}
+    ps: [0.72, 0.76, 0.67, 0.94, 0.62, 0.64]
+    confident: [22, 22, 22, 23, 15, 21]
+    transport_by_size: [4.3, 4.4, 5.3, 6.3, 6.3]
+    catering_by_size: [1.0, 1.5, 3.3, 5.3, 5.2]
+    rho_catering_logpop: 0.72
+    rho_market_ma_between: 0.48
+    rho_market_ma_within: -0.30
+    yakutia_medians: [4.2, 8.5, 8.5, 13.3]
+    yakutia_n: [3, 8, 13, 3]
+    health_gap_actual: 1.08
+    health_gap_expected: 0.06
+    transport_pairs_ci: [10–30 → 30–100, 30–100 → 100–300]   # ожидаемые пары, где 95% интервал разности медиан не включает 0 (проверка вне таблицы сверок)
+    # дополнительные контроли (устойчивость признаков профиля; отдельная таблица в отчёте)
+    sigma_alr:                        # σ по log(доля / «прочее»), среднее z-score типа
+      0: {Здоровье: -0.3, Транспорт: -0.7, Маркетплейсы: 0.7}
+      1: {Транспорт: 0.3}
+      3: {Здоровье: -0.1, Транспорт: 0.3, Общепит: 1.4}
+      4: {Здоровье: -2.1, Маркетплейсы: -1.9}
+      5: {Продовольствие: 0.7}
+    rho_logpop_rest: {транспорт: 0.46, транспорт/«прочее»: -0.04, «прочее»: 0.61, общепит: 0.72, общепит/«прочее»: 0.67}
+    pop_ratio: [0.67, 2.48, 0.72, 3.55, 0.71, 0.76]
+    ma_ratio: [0.98, 0.99, 1.07, 1.31, 0.43, 0.91]
+    type_names:
+      - транспорт ниже, маркетплейсы выше, общепит ниже среднего
+      - Без выраженного профиля · крупнее среднего МО
+      - маркетплейсы выше, общепит ниже, здоровье выше среднего
+      - общепит выше, продовольствие ниже, маркетплейсы ниже среднего · крупные города
+      - маркетплейсы ниже, здоровье ниже среднего · низкая доступность рынков
+      - продовольствие выше, общепит ниже среднего
+    profile_border:                   # пограничные признаки имени: меньшее |σ| (проверка вне таблицы из 33 контролей; множество — точно, значения — допуск ratio)
+      0: {Общепит: 0.56}
+      2: {Здоровье: 0.57}
+      5: {Общепит: 0.51}
+
+# --- Шаг 25: устойчивость к композиционной природе долей (разведочно, без p-значений и порогов) ---
+step25_composition:
+  KMEANS_SEEDS_CHECK: [1, 2, 3, 4, 5]   # seed для сравнения канона с перезапусками KMeans (n_init — из step10_kmeans)
+  MIN_MO_REGION: 5                      # регион с меньшим числом МО с данными не участвует (внутри / между регионами)
+
+# --- Шаг 26: сводка проверок внешней валидности (только чтение результатов; без тестов, порогов и вердиктов) ---
+step26_summary:
+  ETA2_SIZE_BINS: [0.01, 0.06, 0.14]                       # условные границы подписей размера η²_H
+  ETA2_SIZE_LABELS: [ничтожный, малый, средний, большой]
+  RHO_SIZE_BINS: [0.1, 0.3, 0.5]                           # условные границы подписей размера |ρ|
+  RHO_SIZE_LABELS: [едва различима, слабая, умеренная, сильная]
+  NEG_CONTROL_SOURCES:                                     # md-отчёты, из которых разбираются доли контроля «региональный шум» (только чтение)
+    step18: notebooks/18_hypothesis_thresholds.md
+    step21: notebooks/21_supply_thresholds.md
+  NEG_CONTROL_EXPECT:                                      # значения точно как в файлах; при расхождении STOP
+    n_repeats: 200
+    step18: {all_p: 0.925, all_pos: 0.79, in_p: 0.04, in_pos: 0}   # доля p_dec < ALPHA / доля положительных решений правила шага 18
+    step21: {all_p: 1, in_p: 0.025}                                # доля p < ALPHA
+
+# --- Шаг 24: фигуры 1, 3, 4, 5 (описательный шаг: числа только из parquet шагов 19–28, без пересчёта) ---
+step24_figures:
+  TYPE_PORTRAITS_PATH: "data/processed/type_portraits.parquet"
+  COMP_PATH: "data/processed/composition_robustness.parquet"
+  VERDICTS_PATH: "data/processed/hypothesis_verdicts.parquet"
+  R19B_PATH: "data/processed/hypothesis_results_19b.parquet"
+  PS_PATH: "data/processed/prediction_strength_clusters_2024_12.parquet"      # независимая сверка PS (шаг 10d)
+  MATCHING_PATH: "data/processed/kmeans_k6_matching.parquet"                  # независимая сверка сопоставлений (шаг 12)
+  NB23_PATH: "notebooks/23_type_portraits.md"
+  OUT_DIR: "notebooks/figures"
+  NAMES: {fig1: "24_fig1_profiles", fig3: "24_fig3_marketplaces", fig4: "24_fig4_size", fig5: "24_fig5_reliability"}
+  FIGURE_DATA_PATH: "data/processed/figure_data_24.parquet"
+  REPORT_PATH: "notebooks/24_figures.md"
+  FROZEN_SHA256:                           # входы шага: sha256 до и после запуска
+    type_portraits.parquet: "cb3ccd6e72d6a703e78a9f4e93c4b13029292fd28131e39f79f68ba76d267f7c"
+    composition_robustness.parquet: "41bfe1d9ba8a0925e8bf3c8c17d6b8232cf5f33db2f749c796c77a32834e37e1"
+    hypothesis_verdicts.parquet: "01177c53c539fbabded34f03e85d6a8838726df29f93ecb9d47739f96323659f"
+    hypothesis_results_19b.parquet: "d66d64d68a82867a5add988d4441fb0df2d35297b8c94c1514bc9e513c615d9d"
+  FONT: "DejaVu Sans"
+  DPI: 300
+  SVG_HASHSALT: "step24-figures"
+  TYPE_COLORS: ["#0072B2", "#E69F00", "#009E73", "#CC79A7", "#D55E00", "#56B4E9"]   # как на карте 24d (контроль)
+  FORBIDDEN_WORDS: ["подтверждено", "доказано", "причина", "вызывает", "объясняется", "из-за", "следует"]
+  MIN_MARGIN_IN: 0.25                      # поля холста для всех элементов
+  TEXT_OVERLAP_TOL_PX: 0.5                 # перекрытие рамок текстов меньше допуска не считается
+  SOURCE_TOL: 1.0e-9                       # сверка значений рисунка с исходным parquet
+  GROUPS: ["до 10", "10–30", "30–100", "100–300", "более 300"]   # группы размера МО, тыс. жителей (как в шаге 23)
+  TITLE_FS: 12
+  PANEL_FS: 9.5
+  CELL_FS: 8.5
+  LABEL_FS: 8.5
+  TICK_FS: 8.0
+  NOTE_FS: 7.5
+  CAPTION_WRAP_CHARS: 165
+  # фигура 1
+  F1_SIZE_IN: [11.7, 11.4]
+  F1_LEFT_IN: 1.60                         # левый край ячеек (слева подписи категорий)
+  F1_RIGHT_IN: 1.10                        # правое поле: цветовая шкала
+  F1_TOP_IN: 0.85                          # от верха холста до заголовка панели (a)
+  F1_AXES_TOP_OFFSET_IN: 0.62              # заголовок панели → верх ячеек (между ними подписи колонок)
+  F1_CELL_H_IN: 0.34
+  F1_PANEL_GAP_IN: 0.38
+  F1_SIGMA_VMAX: 2.2                       # шкала σ: ±; контроль: все |σ| не больше
+  F1_SHARE_CMAP: "Blues"
+  F1_SHARE_CMAP_RANGE: [0.06, 0.80]
+  F1_SIGMA_CMAP: "RdBu_r"
+  F1_HATCH: "////"
+  F1_HATCH_COLOR: "#1A1A1A"
+  F1_HATCH_LW: 0.5
+  F1_LEGEND_LINE_IN: 0.215
+  F1_CBAR_W_IN: 0.14
+  # фигура 3
+  F3_SIZE_IN: [11.7, 6.5]
+  F3_AXES_IN: {left: 1.25, bottom: 2.30, width: 8.45, height: 3.40}
+  F3_CAPTION_TOP_IN: 1.30
+  F3_YLIM: [-0.62, 0.68]
+  F3_BAR_COLORS: ["#3B4C6B", "#A9B8D3"]    # по долям, по log(доля / «прочее»)
+  F3_BAR_WIDTH: 0.30
+  F3_BAR_OFFSET: 0.17
+  F3_LINE_COLOR: "#777777"
+  # фигура 4
+  F4_SIZE_IN: [11.7, 6.9]
+  F4_COLORS: {transport: "#5E3C99", catering: "#2B2B2B"}
+  F4_AXES_A_IN: {left: 0.95, bottom: 1.95, width: 4.65, height: 4.15}
+  F4_AXES_B_IN: {left: 6.75, bottom: 1.95, width: 4.65, height: 4.15}
+  F4_CAPTION_TOP_IN: 1.15
+  F4_YLIM_A: [0.0, 9.0]
+  F4_YLIM_B: [0.0, 0.30]
+  # фигура 5
+  F5_SIZE_IN: [11.7, 7.6]
+  F5_AXES_A_IN: {left: 0.95, bottom: 4.45, width: 4.7, height: 2.35}
+  F5_AXES_B_IN: {left: 6.7, bottom: 4.45, width: 4.7, height: 2.35}
+  F5_AXES_C_IN: {left: 0.95, bottom: 1.45, width: 10.45, height: 2.15}
+  F5_CAPTION_TOP_IN: 1.00
+  F5_BASE_COLOR: "#C8C8C8"
+  F5_BASE_HATCH: "////"
+  # ожидания контролей (задание шага 24; допуски — отдельными ключами)
+  TOL_F1_MEDIAN: 0.05
+  TOL_F1_SIGMA: 0.02
+  EXPECT_F1_MEDIAN: [[0, Продовольствие, 44.1], [3, Общепит, 6.5], [5, Продовольствие, 46.4]]
+  EXPECT_F1_SIGMA: [[3, Общепит, 1.81, 1.38], [4, Маркетплейсы, -1.83, -1.85], [0, Транспорт, -1.00, -0.66], [2, Здоровье, 0.57, 1.03], [5, Общепит, -0.60, -0.51]]
+  EXPECT_F1_BORDER: [[0, Общепит], [2, Здоровье], [5, Общепит]]     # признаки с пометкой «на границе порога» (шаг 23)
+  TOL_F3: 0.002
+  EXPECT_F3: {between: [0.494, 0.500], within: [-0.301, -0.332], between_n_regions: 69, between_n: 1994}
+  EXPECT_F3_VERDICT_ALL: 0.117             # подпись фигуры 3 (допуск TOL_F3)
+  EXPECT_F3_ALR_ALL: 0.015
+  EXPECT_F3_19B_WITHIN: [-0.299, 2001]
+  EXPECT_F4_N: [260, 882, 590, 186, 54]
+  TOL_F4_MEDIAN: 0.05
+  EXPECT_F4_TRANSPORT: [4.3, 4.4, 5.3, 6.3, 6.3]
+  TOL_F4_DIFF: 0.01
+  EXPECT_F4_DIFF: [["10–30", "30–100", 0.82, 0.69, 0.98], ["30–100", "100–300", 1.05, 0.87, 1.19]]
+  TOL_F5_SHARE: 0.006
+  EXPECT_F5_PS: [0.72, 0.76, 0.67, 0.94, 0.62, 0.64]
+  EXPECT_F5_MATCH: [22, 22, 22, 23, 15, 21]
+  EXPECT_F5_G6: [[0.77, 0.58], [0.35, 0.51], [0.89, 0.61], [0.98, 0.33], [0.72, 0.46], [0.61, 0.57]]
+
+# --- Шаг 27: правило интерпретации кластеров (Alvandyan, Shalileh 2024, формулы 12–13); разведочно ---
+step27_mirkin:
+  MIN_BASE_PP: 0.5                    # STOP, если общее среднее категории меньше этого значения (п.п.): малый знаменатель
+
+# --- Шаг 28: проверка интерпретаций (сверка чисел прежнего отчёта и разведочные проверки, вне предрегистрации) ---
+step28_checks:
+  SEED_28: 28000                      # бутстреп по МО для ρ (число повторов — BOOT_B из step19_tests)
+  PREV_DEC_MONTH: "2023-12"           # месяц для ARI с декабрём 2024 (п. B2)
+  STABLE_SHARE: 0.9                   # п. B3: МО «остаётся в типе», если доля месяцев в декабрьском типе ≥ этого значения
+  SUMMER_MONTHS: ["2023-06", "2023-07", "2023-08"]   # п. B4: месяцы для доли дальневосточных МО в типе 4
+  REMOTE_TYPE: 4                      # тип 4 (пп. B4, B6)
+  MIDDLE_TYPE: 1                      # тип 1 (пп. B8, C3)
+  TOP_TRANSITIONS: 3                  # п. B8: число основных направлений переходов
+  HEALTH_TYPES: [0, 2, 4, 5]          # п. C2: типы для ρ(здоровье, занятые в здравоохранении); для продовольствия — SMALL_TYPES шага 23
+  MIN_TYPE_N_GROUP: 5                 # п. C3: тип показывается в группе размера, если в ней не менее стольких МО типа
+  TOL_SHARE: 0.005                    # допуск для долей
+  TOL_RHO: 0.01                       # допуск для ρ
+  TOL_ARI: 0.01                       # допуск для ARI (в задании не задан; взят как для ρ)
+  EXPECT:                             # ожидания из прежнего отчёта (чат 03.10.2026)
+    changed_any: 1625
+    ari_dec23_dec24: 0.52
+    stable_share_by_type: {0: 0.26, 1: 0.37, 2: 0.36, 3: 0.91, 4: 0.05, 5: 0.21}
+    remote_far_east_dec: [93, 111]
+    remote_far_east_summer: [0.18, 0.19]   # диапазон долей по каждому из SUMMER_MONTHS (с допуском TOL_SHARE)
+    between_region_var: {Здоровье: 0.60, Маркетплейсы: 0.64, Продовольствие: 0.66}
+    far_east_non_remote_mp: {median_pct: 14.6, n: 62}
+    yakutia_rho_logpop_ma: {rho: 0.74, n: 27}
+    middle_top_transitions: [4, 5, 3]
+    middle_nearest: [5, 2]
+  PREV_SOURCES:                       # где получены числа прежнего отчёта (журнал сессии Claude Code вне репозитория)
+    log_path: "~/.claude/projects/-Users-a1-Desktop-----------/3e929f25-d139-48ec-9aaa-f9716afb7fcc.jsonl"
+    items:
+      - {item: B1, where: "notebooks/18b_hypothesis_thresholds_g6_g9.md, строка 46 (шаг 18b); в журнале не пересчитывалось"}
+      - {item: B2, where: "журнал, строки 180–181 (команда и вывод): kmeans_k6_trajectories.parquet, колонка cluster"}
+      - {item: B3, where: "журнал, строки 180–181"}
+      - {item: B4, where: "93 из 111 — notebooks/23_type_portraits.md, строка 618; доли по месяцам — журнал, строки 184–185"}
+      - {item: B5, where: "журнал, строки 168–169"}
+      - {item: B6, where: "журнал, строки 168–169"}
+      - {item: B7, where: "журнал, строки 168–169 (строки 164–165 — ошибочный отбор региона по подстроке, исправлен в 168)"}
+      - {item: B8, where: "переходы — журнал, строки 180–181; ближайшие типы — журнал, строки 156–157"}
+  DATA_QUOTES:                        # п. A: дословные цитаты описания набора (адрес, дата обращения)
+    - {question: "1", source: "data/raw/Данные_СберИндекс_лицензия.pdf, раздел (1), таблица полей, поле consumption (файл скачан 27.09.2026, прочитан 03.10.2026)",
+       quote: "Оценка средних безналичных потребительских расходов в текущем месяце жителей МО на основе моделей СберИндекса на транзакционных данных (руб.)"}
+    - {question: "1", source: "README.md проекта, таблица «Данные», строка consumption.parquet (03.10.2026)",
+       quote: "средние безналичные расходы жителей МО по категориям, руб., помесячно"}
+    - {question: "1", source: "https://sber.ru/sberindex/konkurs_sberindex, раздел «Данные» номинации «Кластеризация» (обращение 03.10.2026)",
+       quote: "Потребительские безналичные расходы на уровне муниципальных образований (МО) по категориям трат (продовольствие, медицина и т.п.)"}
+    - {question: "2", source: "data/raw/Данные_СберИндекс_лицензия.pdf, раздел (1), категория «Продовольствие» (прочитан 03.10.2026)",
+       quote: "В данную категорию входят транзакции в супермаркетах, гипермаркетах, продуктовых магазинах у дома, на рынках и ярмарках, а также расходы на алкогольных напитки и табачные изделия."}
+    - {question: "2", source: "data/raw/Данные_СберИндекс_лицензия.pdf, раздел (1), категория «Общественное питание» (прочитан 03.10.2026)",
+       quote: "В данную категорию входят транзакции в ресторанах, кафе, барах, фастфуд-заведениях, столовых, а также в службах доставки готовой еды."}
+    - {question: "2", source: "data/raw/Данные_СберИндекс_лицензия.pdf, раздел (1), категория «Маркетплейсы» (прочитан 03.10.2026)",
+       quote: "Категория \"Маркетплейсы\" охватывает транзакции на онлайн-платформах, которые предоставляют площадку для продажи товаров и услуг множеством различных продавцов."}
+    - {question: "2", source: "data/raw/Данные_СберИндекс_лицензия.pdf, раздел (1), категория «Маркетплейсы» (прочитан 03.10.2026)",
+       quote: "Транзакции в специализированных интернет-магазинах относятся к соответствующим категориям."}
+  DATA_ANSWERS:                       # п. A: ответы только по цитатам, без домысливания
+    "1": "Описание называет расходы расходами жителей МО и оценкой модели по транзакционным данным. Как определяется принадлежность держателя карты к МО (место жительства или иное) и учитывается ли место транзакции, в описании набора, README и на странице конкурса не сказано."
+    "2": "Явного правила «по продавцу или по товару» в описании нет. Определения категорий перечисляют транзакции по видам торговых точек и сервисов (супермаркеты, рестораны, службы доставки, онлайн-платформы); транзакции в специализированных интернет-магазинах относятся к соответствующим категориям."
+
+# --- Шаг 24б: геометрия МО для карты (скачивание справочника, упрощение покрытия coverage_simplify) ---
+step24b_geometry:
+  MUNICIPAL_DICT_DIR: "~/Documents/municipal_dict"   # тот же каталог, что MUNICIPAL_DICT_PATH в шагах 09 и 17
+  ARCHIVE_URL: "https://www.sberbank.com/common/files/t_dict_municipal.rar"
+  ARCHIVE_SHA256: "319ed22684b77716641bc15b61f7325adc44e9fc47e9be2973d88412d27d21f5"
+  GPKG_SHA256: "e62027630d48e4a13f9b6d173dd074d7358706743fe859ca3b7fa30fefa9813a"
+  CA_BUNDLE: "certs/ca_bundle.pem"                   # подставляется только в запрос скачивания
+  SNAPSHOT_MONTH: "2024-12"                          # срез справочника: полигоны, действующие в этом месяце
+  ACTIVE_YEAR_TO: 9999                               # правило среза: year_to == 9999 (шаг 0г: 2594 полигона)
+  DATA_DOWNLOAD_DATE: "04.10.2026"                   # дата скачивания для подписи источника
+  NATIONAL_TOLERANCE_DEG: 0.005                      # допуск coverage_simplify, карта страны (градусы)
+  NATIONAL_DECIMALS: 4                               # знаков координат в mo_national.geojson
+  CITIES_TOLERANCE_DEG: 0.0005                       # допуск coverage_simplify, врезки Москвы и Санкт-Петербурга
+  CITIES_DECIMALS: 5                                 # знаков координат в mo_cities.geojson
+  CITY_REGION_CODES: {moscow: 77, spb: 78}
+  AREA_CHANGE_THRESHOLD: 0.10                        # |ΔS| выше порога считается заметным изменением площади
+  GAP_THRESHOLD_DEG: 0.001                           # расхождение общей границы соседей выше порога (градусы)
+  GAP_SAMPLE_PER_PAIR: 300                           # общих вершин на пару в проверке расхождения
+  GAP_SAMPLE_SEED: 0
+  OVERLAP_MIN_AREA_DEG2: 1.0e-12                     # меньшая площадь пересечения перекрытием не считается
+  EXPECT_ACTIVE_POLYGONS: 2594                       # контроль: число действующих полигонов (шаг 0г)
+  EXPECT_SAMPLE_POLYGONS: 2004                       # контроль: число МО выборки среди них
+  EXPECT_OVERLAP_PAIRS: 25                           # контроль: пар с перекрытием в исходном покрытии (шаг 0г, допуск точно)
+  MAX_NATIONAL_AREA_CHANGE_MO: 10                    # контроль: МО выборки с |ΔS| выше порога в mo_national.geojson (в шаге 0в: 5)
+  MAX_NATIONAL_BYTES: 12582912                       # контроль: размер mo_national.geojson (12 МиБ)
+  MAX_LOST_PART_AREA_DEG2: 1.0e-8                    # потеря части площадью не менее порога (град²) нарушает контроль; меньшие части перечисляются в отчёте
+
+# --- Шаг 24c: типы МО вне выборки (ближайший центроид канонического разбиения; вне статистик шагов 10–28) ---
+step24c_assign:
+  GEO_NATIONAL_PATH: "data/geo/mo_national.geojson"  # множество действующих МО (шаг 24б)
+  EXPECT_SKLEARN_VERSION: "1.9.1"                    # версия, на которой получены метки; другая версия => STOP
+  EXPECT_SCALER_MEAN: [0.415378, 0.042412, 0.027873, 0.049974, 0.193814]
+  EXPECT_SCALER_SCALE: [0.059433, 0.007676, 0.020292, 0.012714, 0.039859]
+  SCALER_TOL: 5.0e-7
+  EXPECT_INERTIA: 3441.495
+  INERTIA_TOL: 0.01
+  EXPECT_TYPE_SIZES: [411, 396, 334, 319, 111, 433]  # размеры типов 0–5 в kmeans_labels_final
+  EXPECT_ACTIVE: 2594
+  EXPECT_GROUP_A: 407                                # действуют, но нет в consumption
+  EXPECT_GROUP_B: 183                                # в consumption, вне выборки
+  EXPECT_B_COMPLETE: 99                              # из B: за 2024-12 есть пять категорий и «Все категории»
+  EXPECT_B_INCOMPLETE: 84
+  DIST_TOL: 0.005                                    # допуск контрольных расстояний до центроида
+  DIST_DECIMALS: 10                                  # знаков в сохранённых расстояниях (шум многопоточных вычислений около 1e-16 убирается округлением)
+  EXPECT_SAMPLE_DIST: {median: 1.090, p95: 2.128, max: 6.160}
+  EXPECT_B_DIST: {median: 2.048, p95: 4.905, max: 6.323}   # все МО B с полными долями, до применения правила
+  EXPECT_BEYOND_IDS: [409]                           # расстояние больше максимума по выборке
+  EXPECT_ASSIGNED: 98
+  EXPECT_ASSIGNED_BY_TYPE: [28, 18, 15, 14, 16, 7]
+
+# --- Шаг 24g: тип МО по последнему доступному месяцу (для МО со статусом no_dec2024; отдельный класс, вне статистик шагов 10–28) ---
+step24g_lastmonth:
+  AGREEMENT_MIN: 0.80                       # месяц допускается, если согласие метода с месячными метками на выборке не меньше порога
+  TRAJECTORIES_PATH: "data/processed/kmeans_k6_trajectories.parquet"   # месячные метки после сопоставления с якорем декабря 2024
+  EXPECT_MONTHS: 24                         # месяцев 2023-01 … 2024-12
+  EXPECT_CANDIDATES: 84                     # статус no_dec2024 в types_outside_sample.parquet
+  EXPECT_LAST_MONTH_COUNTS: {"2023-12": 42} # последний полный месяц кандидатов (фаза 0г)
+  EXPECT_REGION_COUNTS: {"Республика Бурятия": 22, "Амурская область": 8, "Магаданская область": 6, "Забайкальский край": 5, "Республика Калмыкия": 3, "Республика Тыва": 2, "Камчатский край": 2, "Республика Ингушетия": 2, "Республика Дагестан": 1, "Чукотский автономный округ": 1}
+  EXPECT_OTHER_REGIONS_N: 32                # кандидатов в остальных регионах
+  EXPECT_DEC_AGREEMENT: 1.0                 # декабрь 2024: присвоение к центроидам против kmeans_labels_final
+  NOTICE_MIN_ELIGIBLE: 20                   # если присвоено меньше, скрипт только печатает сообщение автору (не STOP)
+
+# --- Шаг 24d: статическая карта типов МО (фигура 2); проверки и компоновка (24d-2) ---
+step24d_map:
+  GEO_NATIONAL_PATH: "data/geo/mo_national.geojson"
+  GEO_CITIES_PATH: "data/geo/mo_cities.geojson"
+  GEO_REPORT_PATH: "data/geo/geometry_report.json"   # список МО с неверными рёбрами и перекрытиями (шаг 24б)
+  TYPES_OUTSIDE_PATH: "data/processed/types_outside_sample.parquet"
+  ATTRIBUTION_PATH: "data/geo/ATTRIBUTION.md"
+  ATTRIBUTION_CAPTION_HEADING: "## Подпись для карты"   # абзац под этим заголовком читается из файла и идёт в подпись
+  PNG_PATH: "notebooks/figures/24_fig2_map.png"
+  SVG_PATH: "notebooks/figures/24_fig2_map.svg"
+  FIGURE_DATA_PATH: "data/processed/figure_data_24d.parquet"
+  REPORT_PATH: "notebooks/24d_map.md"
+  FIG_SIZE_IN: [11.7, 6.1]
+  DPI: 300
+  FONT: "DejaVu Sans"
+  SVG_HASHSALT: "step24d-fig2"
+  MAX_SVG_BYTES: 20971520                  # больше: SVG не записывается, PNG сохраняется (решение за автором)
+  TYPE_COLORS: ["#0072B2", "#E69F00", "#009E73", "#CC79A7", "#D55E00", "#56B4E9"]
+  BORDER_LINEWIDTH_PT: 0.3                 # граница МО: линия цвета заливки (скрывает швы)
+  ASSIGNED_HATCH: "////"                   # класс 2: тип присвоен вне выборки; штриховка поверх цвета типа
+  ASSIGNED_HATCH_COLOR: "#1A1A1A"
+  NO_TYPE_FACE: "#F4EEE2"                  # класс 3: светлая заливка (не серая) и своя штриховка
+  NO_TYPE_HATCH: "xxxx"
+  NO_TYPE_HATCH_COLOR: "#B9AE98"
+  HATCH_LINEWIDTH_PT: 0.4
+  PROJECTION_LAT_DEG: 60.0                 # aspect = 1 / cos(широты)
+  TITLE: "Типы МО, декабрь 2024"
+  TITLE_FONTSIZE: 12
+  TITLE_TOP_IN: 5.85                       # верхний край заголовка (дюймы от нижнего края холста); центр по холсту
+  LEGEND_FONTSIZE: 6.0
+  LEGEND_NCOL: 2
+  LEGEND_GAP_IN: 0.10                      # зазор между нижним краем оси карты и верхом легенды
+  INSET_FONTSIZE: 6.5
+  CAPTION_FONTSIZE: 5.8
+  CAPTION_WRAP_CHARS: 235
+  CAPTION_LEFT_IN: 0.30
+  CAPTION_GAP_IN: 0.10                     # зазор между легендой и подписью
+  MAP_RECT_IN: {left: 3.27, top: 5.55, width: 8.15}          # карта страны: левый край, верхний край, ширина (дюймы); высота из экстента и aspect
+  MOSCOW_INSET_IN: {left: 0.30, bottom: 1.66, width: 1.50}   # высота из размеров bbox
+  SPB_INSET_IN: {left: 0.30, bottom: 3.95, width: 1.65}
+  INSET_PAD_FRACTION: 0.02                 # поле вокруг bbox МО во врезке (доля размаха)
+  INSET_FRAME_COLOR: "#222222"
+  INSET_FRAME_LW: 0.7
+  LEADER_LW: 0.6
+  LEADER_HALO_LW: 1.8                      # белая подложка линии-выноски
+  LEADER_RECT_CORNER: "bottom-left"            # где линия-выноска упирается в рамку на карте: nearest | bottom-left | top-left | left-middle
+  MIN_MARGIN_IN: 0.25                      # отступ элементов от края холста
+  PNG_MARGIN_MAX_IN: 0.5                   # поля холста по массиву PNG: от MIN_MARGIN_IN до этого значения
+  MAX_GAP_IN: 0.2                          # зазоры карта-легенда и легенда-подпись
+  TITLE_CENTER_TOL_IN: 0.02
+  PIXEL_CHECK_MIN_RADIUS_PX: 3.0           # проверка по пикселям: радиус вписанной окружности не меньше порога
+  PIXEL_MIC_TOLERANCE_DEG: 1.0e-4
+  PIXEL_TOL_CLASS1: 2                      # допуск по каналу (из 255), класс 1
+  PIXEL_TOL_SEGMENT: 3                     # допуск расстояния до отрезка заливка-штриховка (из 255), классы 2 и 3
+  EXPECT_PIXEL_CHECKED_MIN: 1000           # проверено МО хотя бы в одной оси (в расчёте до компоновки 1061)
+  EXPECT_PIXEL_TYPE_MIN: 20                # класс 1: проверено МО по каждому из шести типов
+  EXPECT_PIXEL_CLASS_MIN: 20               # классы 2 и 3: проверено МО в каждом
+  EXPECT_PIXEL_AREA_SHARE_MIN: 0.85        # доля площади карты страны, приходящаяся на проверенные МО
+  MAX_PIXEL_MISMATCH: 5
+  LON_AFTER_MAX: 192.0                     # долготы после сдвига на +360: максимум не больше (решение автора 04.10.2026; факт 191.0231)
+  LON_AFTER_MIN: 165.0                     # минимум не меньше (факт 165.2883)
+  LON_BEFORE_RANGE: [-180.0, 180.0]
+  SHIFT_REGION_SUBSTRING: "Чукот"
+  CHECK_409: {territory_id: 409, name_substring: "Сут-Хольск", status: "too_far"}
+  EXPECT_REGIONS_ALL: 85
+  EXPECT_REGIONS_SAMPLE: 73
+  FORBIDDEN_WORDS: ["подтверждено", "доказано", "причина", "вызывает", "объясняется", "из-за", "следует"]
+  EXPECT_ACTIVE: 2594
+  EXPECT_SAMPLE_BY_TYPE: [411, 396, 334, 319, 111, 433]
+  EXPECT_ASSIGNED_BY_TYPE: [28, 18, 15, 14, 16, 7]
+  EXPECT_NO_TYPE: {no_data_in_dataset: 407, no_dec2024: 84, too_far: 1}
+  EXPECT_BEYOND_P95: 45                    # из присвоенных: расстояние больше p95 выборки (p95 из группы step24c_assign)
+  EXPECT_INSET_POLYGONS: {moscow: 146, spb: 111}
+  EXPECT_LEGEND_ITEMS: 8
+
+# --- Шаг 24f: данные слоёв лендинга (только чтение готовых файлов; STABLE_SHARE берётся из step28_checks) ---
+step24f_layers:
+  GEO_PATH: "data/geo/mo_national.geojson"
+  LABELS_PATH: "data/processed/kmeans_labels_final.parquet"
+  OUTSIDE_PATH: "data/processed/types_outside_sample.parquet"
+  LAST_MONTH_PATH: "data/processed/types_last_month.parquet"
+  MARKET_ACCESS_PATH: "data/raw/market_access.parquet"
+  TRAJECTORIES_PATH: "data/processed/kmeans_k6_trajectories.parquet"
+  PORTRAITS_PATH: "data/processed/type_portraits.parquet"
+  MATCHING_PATH: "data/processed/kmeans_k6_matching.parquet"
+  OUT_LAYER_PATH: "data/processed/layer_data_24f.parquet"
+  OUT_REGION_PATH: "data/processed/region_coverage_24f.parquet"
+  REPORT_PATH: "notebooks/24f_layer_data.md"
+  N_MONTHS: 24
+  FROZEN_SHA256:                           # входы, замороженные до шага: sha256 до чтения
+    data/processed/kmeans_labels_final.parquet: "46cf888d54ec9c6c8ca148f001f867b9408727257d9c98f6240fbe36aa60b22e"
+    data/processed/types_outside_sample.parquet: "16303d4f1dcb15441c80e5e8934a3996bd7ce5639ca81ec11c1afa8234cf30da"
+    data/processed/type_portraits.parquet: "cb3ccd6e72d6a703e78a9f4e93c4b13029292fd28131e39f79f68ba76d267f7c"
+    data/geo/mo_national.geojson: "ea9a19cd73c682e17fa3429888069b1fd28dd39e22b010750f9240948bc319e2"
+  EXPECT_ROWS: 2594
+  EXPECT_REGIONS: 85
+  EXPECT_CLASS_SAMPLE: 2004
+  EXPECT_CLASS_ASSIGNED: 98
+  EXPECT_NO_TYPE_TOTAL: 492                # классы 3 и 4 вместе (N4 берётся из types_last_month.parquet)
+  EXPECT_NO_DATA: 407
+  EXPECT_TOO_FAR: 1
+  EXPECT_MA_NONNULL: 2571
+  EXPECT_MA_CLASS1: 2004
+  EXPECT_MA_CLASS2: 83
+  EXPECT_MA_RANGE: [110.3, 1000.0]
+  EXPECT_MA_MEDIAN: 321.6
+  MA_MEDIAN_TOL: 0.05
+  EXPECT_EMPTY_SAMPLE_REGIONS: [Ростовская область, Краснодарский край, Воронежская область, Курская область, Брянская область, Белгородская область, Республика Крым, Севастополь, Республика Бурятия, Республика Ингушетия, Республика Дагестан, Чеченская Республика]
+  EXPECT_REGION_N: {Республика Крым: 25, Севастополь: 10}   # все МО без данных в датасете
+  EXPECT_STABLE_BY_TYPE: [0.263, 0.366, 0.359, 0.906, 0.045, 0.212]   # доля МО с долей месяцев в типе не меньше STABLE_SHARE
+  STABLE_BY_TYPE_TOL: 0.005
+  EXPECT_STABLE_QUANTILES: [0.2083, 0.5833, 0.8333, 0.9583, 1.0]      # 5/25/50/75/95
+  STABLE_QUANTILES: [0.05, 0.25, 0.5, 0.75, 0.95]
+  STABLE_QUANTILES_TOL: 0.001
+  EXPECT_FULL_STABLE: 379
+  EXPECT_FULL_STABLE_BY_TYPE: [40, 5, 48, 272, 0, 14]
+  EXPECT_DEC_DIFFERS: 31
+  EXPECT_ARI_DEC: 0.9609
+  ARI_DEC_TOL: 0.0005
+  EXPECT_CONFIDENT_BY_TYPE: [22, 22, 22, 23, 15, 21]
+  COVERAGE_SHARE_MIN: 0.5                  # регион в списке «много МО без типа», если share_no_type не меньше порога
+  EXPECT_COVERAGE_BEFORE_24G: 13           # число таких регионов до шага 24g (МО класса 4 считаются без типа)
+  WEAK_TYPE: 4                             # тип с неуверенным сопоставлением месяцев (описание в отчёте)
+  FORBIDDEN_WORDS: ["подтверждено", "доказано", "причина", "вызывает", "объясняется", "из-за", "следует"]
+
+# --- Шаг 24e: каркас лендинга (один автономный HTML-файл, тексты из site/content/texts.json) ---
+step24e_landing:
+  GEO_NATIONAL_PATH: "data/geo/mo_national.geojson"
+  GEO_CITIES_PATH: "data/geo/mo_cities.geojson"
+  ATTRIBUTION_PATH: "data/geo/ATTRIBUTION.md"
+  ATTRIBUTION_CAPTION_HEADING: "## Подпись для карты"      # абзац под заголовком идёт в подпись под картой
+  LAYER_PATH: "data/processed/layer_data_24f.parquet"
+  COVERAGE_PATH: "data/processed/region_coverage_24f.parquet"
+  OUTSIDE_PATH: "data/processed/types_outside_sample.parquet"
+  LAST_MONTH_PATH: "data/processed/types_last_month.parquet"
+  LABELS_PATH: "data/processed/kmeans_labels_final.parquet"
+  SHARES_PATH: "data/processed/category_shares.parquet"
+  PORTRAITS_PATH: "data/processed/type_portraits.parquet"
+  MIRKIN_PATH: "data/processed/mirkin_rule_27.parquet"
+  SUMMARY_PATH: "data/processed/hypothesis_summary.parquet"
+  COMPOSITION_PATH: "data/processed/composition_robustness.parquet"
+  TYPE_NAMES_MD_PATH: "docs/type_names.md"
+  INTERPRETATION_PATH: "docs/interpretation.md"
+  INTERPRETATION_LIMITS_HEADING: "## 6. Ограничения"
+  NB23_PATH: "notebooks/23_type_portraits.md"
+  NB26_PATH: "notebooks/26_hypothesis_summary.md"
+  FIGURES:                                  # номер фигуры: файл (SVG вставляется в страницу целиком; PNG кодируется в base64)
+    1: "notebooks/figures/24_fig1_profiles.svg"
+    2: "notebooks/figures/24_fig2_map.png"
+    3: "notebooks/figures/24_fig3_marketplaces.svg"
+    4: "notebooks/figures/24_fig4_size.svg"
+    5: "notebooks/figures/24_fig5_reliability.svg"
+  FIGURE_PLACEHOLDER: "рисунок будет добавлен"
+  OUT_HTML_PATH: "site/index.html"
+  TEXTS_PATH: "site/content/texts.json"
+  SITE_README_PATH: "site/README.md"
+  REPORT_PATH: "notebooks/24e_landing_check.md"
+  MAX_HTML_BYTES: 12582912
+  FROZEN_SHA256:                            # входы, замороженные до шага: sha256 до чтения и после записи
+    data/geo/mo_national.geojson: "ea9a19cd73c682e17fa3429888069b1fd28dd39e22b010750f9240948bc319e2"
+    data/geo/mo_cities.geojson: "44f6a9b5e1922348ec5e016fd882a5e451af6e8da5a48aa90af6ba381c7d97f4"
+    data/processed/kmeans_labels_final.parquet: "46cf888d54ec9c6c8ca148f001f867b9408727257d9c98f6240fbe36aa60b22e"
+    data/processed/types_outside_sample.parquet: "16303d4f1dcb15441c80e5e8934a3996bd7ce5639ca81ec11c1afa8234cf30da"
+    data/processed/type_portraits.parquet: "cb3ccd6e72d6a703e78a9f4e93c4b13029292fd28131e39f79f68ba76d267f7c"
+    data/processed/mirkin_rule_27.parquet: "0c645d5ff876605e409bf62b9277cab70f78b6ce563dec11e4b281eda5ce5d62"
+    data/processed/composition_robustness.parquet: "41bfe1d9ba8a0925e8bf3c8c17d6b8232cf5f33db2f749c796c77a32834e37e1"
+  # --- тексты ---
+  TEXT_KEYS: [hero_title, hero_lead, section_intro_map, map_caption, section_intro_types,
+              type_card_text_0, type_card_text_1, type_card_text_2, type_card_text_3, type_card_text_4, type_card_text_5,
+              section_intro_checks, section_intro_figures,
+              figure_caption_1, figure_caption_2, figure_caption_3, figure_caption_4, figure_caption_5,
+              section_intro_method, method_text, section_intro_data, section_intro_coverage,
+              layer_note_market_access, layer_note_stability, layer_note_last_month]
+  TEXT_PLACEHOLDER: "[текст будет добавлен автором]"
+  TEXTS_INPUT_PATH: "site/content/texts_input.json"          # шаг 24e-2, часть Б: входные тексты автора (только чтение)
+  REGISTRY_PATH: "site/content/numbers_registry.csv"         # реестр чисел текстов: key, token, source_file, anchor
+  TEXTS_INPUT_SHA256: "cb3b5a7ec81ec447fe683868bdd9c0b0db7f695ea9e15e9ad2474ccb253777c1"
+  REGISTRY_SHA256: "b04aee358924df31021f40d58838c7a71a0aea8854e523b5e957ffa46a778f92"
+  HERO_TITLE_INITIAL: "Типы муниципальных образований России по структуре безналичных расходов"
+  # --- карта ---
+  TYPE_COLORS: ["#0072B2", "#E69F00", "#009E73", "#CC79A7", "#D55E00", "#56B4E9"]
+  PROJECTION_LAT_DEG: 60.0                  # равнопромежуточная проекция, y делится на cos(широты)
+  GEO_SCALE_NATIONAL: 10000                 # координаты mo_national: 4 знака
+  GEO_SCALE_CITIES: 100000                  # координаты mo_cities: 5 знаков
+  LON_SHIFT_BELOW: 0.0                      # долготы меньше порога сдвигаются на +360 (Чукотка)
+  LON_AFTER_RANGE: [18.0, 192.0]            # допустимый диапазон долгот после сдвига
+  CITY_SWITCH_PX_PER_DEG: 100.0             # от этого масштаба (пикселей на градус долготы) вместо mo_national рисуется mo_cities
+  MAX_ZOOM_FACTOR: 1500.0                   # максимальный масштаб относительно масштаба «вся страна»
+  BORDER_LINEWIDTH_PX: 0.3                  # граница МО: линия цвета заливки
+  MAP_BG: "#F7F5EF"
+  DIM_FACE: "#E4E0D6"                       # МО отфильтрованных типов и классов
+  ASSIGNED_HATCH_COLOR: "#1A1A1A"           # класс 2: штриховка «////» поверх цвета типа
+  LASTMONTH_HATCH_COLOR: "#1A1A1A"          # класс 4: точки поверх цвета типа
+  NO_TYPE_FACE: "#F4EEE2"                   # класс 3: светлая заливка и штриховка «xxxx»
+  NO_TYPE_HATCH_COLOR: "#B9AE98"
+  NO_VALUE_FACE: "#F4EEE2"                  # слои «Доступность рынков» и «Устойчивость типа»: МО без значения, горизонтальная штриховка
+  NO_VALUE_HATCH_COLOR: "#B9AE98"
+  MARKET_ACCESS_SCALE: {kind: log, min: 110.3, max: 1000.0, bins: 64}   # kind: log или linear; границы шкалы = диапазон данных
+  MARKET_ACCESS_RAMP: ["#EAF2F9", "#9CC3E1", "#2F7FBF", "#08306B"]
+  STABILITY_STEPS: 24                       # устойчивость типа: доля из 24 месяцев, 25 значений
+  STABILITY_RAMP: ["#F3EFF8", "#B9A4D6", "#6B43A8", "#2E0B63"]
+  SEARCH_MAX_RESULTS: 15
+  SEARCH_ZOOM_MAX_MATCHES: 25               # приближение к объединению найденных МО, если их не больше порога
+  # --- контроли данных ---
+  EXPECT_ACTIVE: 2594
+  EXPECT_CLASSES: {1: 2004, 2: 98, 4: 74, 3: 418}
+  EXPECT_SAMPLE_BY_TYPE: [411, 396, 334, 319, 111, 433]
+  EXPECT_ASSIGNED_BY_TYPE: [28, 18, 15, 14, 16, 7]
+  EXPECT_MA_NONNULL: 2571
+  EXPECT_MA_NULL: 23
+  EXPECT_MA_RANGE: [110.3, 1000.0]
+  EXPECT_STABLE_NONNULL: 2004
+  EXPECT_EMPTY_SAMPLE_REGIONS: 12
+  EXPECT_COVERAGE_ROWS: 85
+  EXPECT_REGIONS_SAMPLE: 73
+  EXPECT_SUMMARY_ROWS: 101
+  EXPECT_CONTROL_ROWS: 6
+  EXPECT_CITY_POLYGONS: {moscow: 146, spb: 111}
+  EXPECT_BEYOND_P95: 45                     # из 98 присвоенных вне выборки: расстояние больше p95 выборки (строка в notebooks/24c_types_outside_sample.md)
+  EXPECT_DEC_DIFFERS: 31
+  BROWSER_BLOCK_EMPTY_TEXT: "результаты теста не найдены, запустить src/24e_landing_test.py"   # текст блока browser-check, пока тест не запускался
+  FORBIDDEN_STEMS: ["подтвержд", "доказан", "причин", "вызыва", "объясня", "из-за", "следует"]   # правило 2.3: проверка по основам без учёта регистра
+  EXPECT_LAST_MONTH_COUNTS: {"2023-03": 13, "2023-04": 1, "2023-12": 40, "2024-04": 2, "2024-05": 2, "2024-09": 8, "2024-11": 8}   # МО класса 4 по последнему доступному месяцу (notebooks/24e_landing_check.md, раздел 7; сумма 74)
+  CARD_SHARE_TOL: 0.006                     # допуск для долей и дробных контрольных значений карточек; целые числа сверяются точно
+  EXPECT_CARDS:                             # контрольные значения карточек из задания: доля выборки, PS, уверенные сопоставления, Г6 и базовый уровень
+    0: {share: 0.205, ps: 0.72, confident: 22, g6: 0.77, g6_base: 0.58}
+    3: {ps: 0.94, confident: 23}
+  EXPECT_TOP_REGIONS: 5
+  TRAJECTORIES_PATH: "data/processed/kmeans_k6_trajectories.parquet"   # поправка 3: метки МО выборки по 24 месяцам
+  MATCHING_PATH: "data/processed/kmeans_k6_matching.parquet"           # поправка 3: уверенность сопоставления типов по месяцам
+  EXPECT_MONTHS: 24
+  CSV_FILENAME: "types_by_month_2023_2024.csv"   # кнопка «Скачать CSV»: файл строится в браузере (Blob)
+  EXPECT_CSV_ROWS: 2004                     # строк данных в CSV (МО выборки)
+  EXPECT_CSV_COLS: 27                       # колонок CSV: territory_id, name, region_name и 24 месяца
+  EXPECT_CSV_COMMENT_LINES: 8                # строки комментария в начале CSV: заголовок, 6 типов, строка про метки по месяцам
+  MIN_TOUCH_PX: 40                          # минимальные ширина и высота интерактивных элементов на узком экране (тест в браузере)
+  TEST_VIEWPORTS: [[1440, 900], [1024, 768], [390, 844]]   # размеры окон теста в браузере
+  TEST_NARROW_PX: 390                       # ширина, на которой измеряются интерактивные элементы
+  TEST_FILTER_TOL: 2                        # допуск возврата цвета пикселя после повторного клика по фильтру (из 255 по каналу)
+  TEST_FILTER_WAIT_MS: 150                  # ожидание после двух кадров requestAnimationFrame
+  TEST_SHOTS_DIR: "/tmp/step24e_shots"
+  TEST_RESULTS_PATH: "/tmp/step24e_test_results.json"
+  TEST_CSV_SAMPLE: 10                       # число МО для сверки CSV с kmeans_k6_trajectories.parquet (кроме полной сверки)
+  EXPECT_MONTH_FIRST: "2023-01"
+  EXPECT_ARI_DEC: 0.9609                    # ARI меток траекторий декабря 2024 и канонических
+  ARI_DEC_TOL: 0.0005
+  EXPECT_CONFIDENT_BY_TYPE: [22, 22, 22, 23, 15, 21]   # уверенных сопоставлений из 23 месяцев (без якорного), типы 0-5
+  MONTH_NO_LABEL: 255                       # байт «нет метки» во встроенной таблице меток по месяцам
+  MONTH_PLAY_MS: 1000                       # кнопка «играть»: один месяц в секунду
+  EXPECT_LIMITS_ITEMS: 7                    # пунктов в разделе «6. Ограничения» docs/interpretation.md
+  PROFILE_Z_THRESHOLD_FROM: "10b_kmeans_cluster_profiles"   # модуль, из которого берётся порог |σ| для пометок «держится» и «зависит от записи»
+  # --- проверка страницы ---
+  FORBIDDEN_WORDS: ["подтверждено", "доказано", "причина", "вызывает", "объясняется", "из-за", "следует"]
+  FORBIDDEN_UNITS: ["км²", "км2", "кв. км"]
+  CONTRAST_MIN: 4.5
+  CONTRAST_PAIRS:                           # цвета текста и фона страницы (WCAG 2)
+    - {name: "основной текст", fg: "#1D2329", bg: "#FBFAF7"}
+    - {name: "приглушённый текст", fg: "#4B5563", bg: "#FBFAF7"}
+    - {name: "приглушённый текст на панели", fg: "#4B5563", bg: "#F1EEE6"}
+    - {name: "ссылки и акцент", fg: "#0B5A8A", bg: "#FBFAF7"}
+    - {name: "основной текст на панели", fg: "#1D2329", bg: "#F1EEE6"}
+    - {name: "заглушка текста", fg: "#6B3A00", bg: "#FFF3D6"}
+    - {name: "текст кнопки", fg: "#1D2329", bg: "#E9E5DA"}
+    - {name: "светлый текст на тёмном", fg: "#FFFFFF", bg: "#1D2B36"}
+    - {name: "подсказка карты", fg: "#FFFFFF", bg: "#1D2B36"}
+
+# --- Шаг 31: матрица «метод × шесть индексов качества» и сравнение методов на декабре 2024 (описательно, вне предрегистрации) ---
+step31_methods:
+  SEED: 42                            # random_state везде, где применим
+  KMEANS_N_INIT: 10
+  GMM_COVARIANCE_TYPE: "full"
+  GMM_N_INIT: 10
+  GMM_REG_COVAR: 1.0e-06              # значение по умолчанию sklearn, зафиксировано явно
+  GMM_MAX_ITER: 100
+  WARD_LINKAGE: "ward"
+  SPECTRAL_AFFINITY: "precomputed"
+  SPECTRAL_ASSIGN_LABELS: "kmeans"
+  SPECTRAL_N_INIT: 10
+  SPECTRAL_WEIGHT: "similarity"       # вес рёбер в матрице смежности (тот же, что в MQ, AVI, AVU)
+  NETWORK_WEIGHT: "similarity"
+  LOUVAIN_K_SOURCE: "step11b"         # M8 и k метода M2: итоговый запуск шага 11b (K = число сообществ); запуск шага 11 (seed LOUVAIN_SEED) — справочный контроль
+  LOUVAIN_RUNS_PATH: "data/processed/louvain_runs_2024_12.parquet"   # 100 запусков шага 11b (seed, K, MQ)
+  KMEANS_LABELS_PATH: "data/processed/kmeans_labels_final.parquet"
+  SPEC_LABELS_PATH: "data/processed/robust2_spec_labels.parquet"
+  LOUVAIN_STEP11_LABELS_PATH: "data/processed/louvain_labels_2024_12_seed42.parquet"
+  LOUVAIN_FINAL_LABELS_PATH: "data/processed/louvain_labels_2024_12.parquet"
+  LOUVAIN_FINAL_SEED_PATH: "data/processed/louvain_final_seed_2024_12.txt"
+  SHARES_PATH: "data/processed/category_shares.parquet"
+  NB10_PATH: "notebooks/10_kmeans_k_selection.md"
+  NB11_PATH: "notebooks/11_louvain_metrics.md"
+  NB11B_PATH: "notebooks/11b_louvain_stability.md"
+  NB13_PATH: "notebooks/13_louvain_monthly_check.md"
+  NB15_PATH: "notebooks/15_robustness_checks_2.md"
+  METHODS:                            # код, название, алгоритм, вариант признаков, k (число или "louvain")
+    - {code: M1, name: "KMeans, A, k = 6", algo: kmeans, variant: A, k: 6}
+    - {code: M2, name: "KMeans, A, k = K Louvain", algo: kmeans, variant: A, k: louvain}
+    - {code: M3, name: "KMeans, B, k = 6", algo: kmeans_saved, variant: B, k: 6}
+    - {code: M4, name: "KMeans, C, k = 6", algo: kmeans_saved, variant: C, k: 6}
+    - {code: M5, name: "Ward, A, k = 6", algo: ward, variant: A, k: 6}
+    - {code: M6, name: "Гауссова смесь, A, k = 6", algo: gmm, variant: A, k: 6}
+    - {code: M7, name: "Спектральная, сеть, k = 6", algo: spectral, variant: A, k: 6}
+    - {code: M8, name: "Louvain, сеть", algo: louvain, variant: A, k: louvain}
+  INDICES: ["SW", "CH", "S_Dbw", "MQ", "AVI", "AVU"]
+  DIRECTIONS: {SW: "больше лучше", CH: "больше лучше", S_Dbw: "меньше лучше", MQ: "больше лучше", AVI: "больше лучше", AVU: "меньше лучше"}
+  INDEX_SPACE: {SW: "атрибутивное пространство варианта", CH: "атрибутивное пространство варианта", S_Dbw: "атрибутивное пространство варианта", MQ: "каноническая сеть", AVI: "каноническая сеть", AVU: "каноническая сеть"}
+  FIG_SIZE_IN: [11.7, 6.0]
+  FIG_DPI: 300
+  FIG_MARGIN_MIN_IN: 0.25
+  FIG_PNG_PATH: "notebooks/figures/31_method_comparison.png"
+  FIG_SVG_PATH: "notebooks/figures/31_method_comparison.svg"
+  FIG2_PNG_PATH: "notebooks/figures/31_method_comparison_commonA.png"   # то же для SW, CH, S_Dbw в общем пространстве A
+  FIG2_SVG_PATH: "notebooks/figures/31_method_comparison_commonA.svg"
+  OUT_TABLE_PATH: "data/processed/method_comparison_31.parquet"
+  OUT_PARTITIONS_PATH: "data/processed/method_partitions_31.parquet"
+  REPORT_PATH: "notebooks/31_method_comparison.md"
+  FORBIDDEN_STEMS: ["подтвержд", "доказан", "причин", "вызыва", "объясня", "из-за", "следует"]
+
+# --- Шаг 32: сравнение правил построения рёбер сети и их влияния на структуру сети и результаты кластеризации (декабрь 2024; описательно) ---
+step32_edgerules:
+  K: 8                                # k во всех kNN-правилах (как ECON_KNN_K и TRANSPORT_KNN_K; совпадение проверяется)
+  LAGS: [-2, -1, 0, 1, 2]             # лаги R4, месяцы
+  WEIGHT_TOL: 1.0e-9                  # допуск выхода коэффициента корреляции за [-1, 1] из-за округления (затем значения обрезаются)
+  SHARES_PATH: "data/processed/category_shares.parquet"
+  KMEANS_LABELS_PATH: "data/processed/kmeans_labels_final.parquet"
+  LOUVAIN_STEP11_LABELS_PATH: "data/processed/louvain_labels_2024_12_seed42.parquet"
+  LOUVAIN_FINAL_LABELS_PATH: "data/processed/louvain_labels_2024_12.parquet"
+  ECON_NETWORK_PATH: "data/processed/economic_networks/2024-12_std_knn8.parquet"
+  HIGHWAY_PATH: "data/processed/transport_network_highway_knn8.parquet"
+  RAILWAY_PATH: "data/processed/transport_network_railway_knn8.parquet"
+  RAILWAY_BEFORE_PATH: "data/processed/transport_network_railway_knn8_before_impute.parquet"
+  CONNECTION_VALID_PATH: "data/processed/connection_valid.parquet"
+  NB05_PATH: "notebooks/05_economic_network_2024_12_std_knn8.md"
+  NB07_PATH: "notebooks/07_transport_networks.md"
+  NB08_PATH: "notebooks/08_economic_vs_transport.md"
+  NB10_PATH: "notebooks/10_kmeans_k_selection.md"
+  NB11_PATH: "notebooks/11_louvain_metrics.md"
+  NB11B_PATH: "notebooks/11b_louvain_stability.md"
+  RULES:                              # код, название, вид, вес ребра в основных таблицах
+    - {code: R1, name: "kNN8 по косинусу z-оценок, декабрь 2024 (канон)", weight: similarity}
+    - {code: R2, name: "порог по косинусу сырых долей, декабрь 2024", weight: none}
+    - {code: R3, name: "kNN8 по корреляции рядов (120 значений)", weight: rho}
+    - {code: R4, name: "kNN8 по максимальной лаговой корреляции (лаги -2..+2)", weight: rho_max}
+    - {code: R5, name: "kNN8 по расстоянию highway", weight: unit}
+    - {code: R6, name: "kNN8 по расстоянию railway с достройкой нулей", weight: unit}
+  R2_STATUS: "нет функции"             # порог 0.9 (RAW_NET_EDGE_THRESHOLD) применяется внутри main() шага 04; отдельной функции нет, вариант не воссоздаётся
+  EXPECT_N_SAMPLE: 2004
+  EXPECT_N_RAILWAY_NODES: 1260        # МО выборки в железнодорожной сети шага 07
+  EXPECT_IMPUTED_RAILWAY_PAIRS: 100   # достроено пар (notebooks/07); в notebooks/08 напечатано 95 — показывается, файлы не меняются
+  EXPECT_NB08_IMPUTED_PRINTED: 95
+  INDICES: ["SW", "CH", "S_Dbw", "MQ", "AVI", "AVU"]
+  DIRECTIONS: {SW: "больше лучше", CH: "больше лучше", S_Dbw: "меньше лучше", MQ: "больше лучше", AVI: "больше лучше", AVU: "меньше лучше"}
+  RANK_METRICS: ["SW", "CH", "S_Dbw", "ARI с KMeans", "NMI с KMeans"]
+  RANK_DIRECTIONS: {"SW": "больше лучше", "CH": "больше лучше", "S_Dbw": "меньше лучше", "ARI с KMeans": "больше", "NMI с KMeans": "больше"}
+  FIG_SIZE_IN: [11.7, 6.5]
+  FIG_DPI: 300
+  FIG_MARGIN_MIN_IN: 0.25
+  FIG_PNG_PATH: "notebooks/figures/32_edge_rules.png"
+  FIG_SVG_PATH: "notebooks/figures/32_edge_rules.svg"
+  OUT_TABLE_PATH: "data/processed/edge_rules_32.parquet"
+  OUT_PARTITIONS_PATH: "data/processed/edge_rules_partitions_32.parquet"
+  REPORT_PATH: "notebooks/32_edge_rules.md"
+  FORBIDDEN_STEMS: ["подтвержд", "доказан", "причин", "вызыва", "объясня", "из-за", "следует"]
+
+# --- Прочее ---
+misc:
+  ROBUST_N_JOBS: 8                    # параллельных процессов (по месяцам) для шага 14, п. 2

@@ -1,0 +1,42 @@
+key,token,source_file,anchor
+hero_lead,2004,README.md,Рабочая выборка — 2004 МО
+hero_lead,24,README.md,с полной историей за 24 месяца
+hero_lead,2023,README.md,(январь 2023 – декабрь 2024)
+hero_lead,2024,README.md,(январь 2023 – декабрь 2024)
+type_card_text_0,411,notebooks/24e_landing_check.md,"(411, 396, 334, 319, 111, 433)"
+type_card_text_1,396,notebooks/24e_landing_check.md,"(411, 396, 334, 319, 111, 433)"
+type_card_text_2,334,notebooks/24e_landing_check.md,"(411, 396, 334, 319, 111, 433)"
+type_card_text_3,319,notebooks/24e_landing_check.md,"(411, 396, 334, 319, 111, 433)"
+type_card_text_4,111,notebooks/24e_landing_check.md,"(411, 396, 334, 319, 111, 433)"
+type_card_text_5,433,notebooks/24e_landing_check.md,"(411, 396, 334, 319, 111, 433)"
+figure_caption_1,2024,README.md,(январь 2023 – декабрь 2024)
+figure_caption_2,2024,README.md,(январь 2023 – декабрь 2024)
+method_text,24,README.md,с полной историей за 24 месяца
+method_text,6,README.md,KMeans (k = 6)
+method_text,2024,README.md,(январь 2023 – декабрь 2024)
+method_text,8,README.md,косинусное сходство → kNN-граф (k = 8)
+section_intro_data,2023,README.md,(январь 2023 – декабрь 2024)
+section_intro_data,2024,README.md,(январь 2023 – декабрь 2024)
+section_intro_data,4.0,README.md,CC BY-SA 4.0
+section_intro_data,2004,README.md,Рабочая выборка — 2004 МО
+section_intro_data,24,README.md,с полной историей за 24 месяца
+section_intro_coverage,2594,notebooks/24e_landing_check.md,МО во встроенных данных (layer_data_24f.parquet) | 2594
+section_intro_coverage,2004,README.md,Рабочая выборка — 2004 МО
+section_intro_coverage,98,notebooks/24e_landing_check.md,"{1: 2004, 2: 98, 4: 74, 3: 418}"
+section_intro_coverage,74,notebooks/24e_landing_check.md,"{1: 2004, 2: 98, 4: 74, 3: 418}"
+section_intro_coverage,418,notebooks/24e_landing_check.md,"{1: 2004, 2: 98, 4: 74, 3: 418}"
+section_intro_coverage,2024,README.md,(январь 2023 – декабрь 2024)
+section_intro_coverage,45,notebooks/24e_landing_check.md,дальше 95-го процентиля расстояний выборки: 45 из 98
+section_intro_coverage,95,notebooks/24e_landing_check.md,дальше 95-го процентиля расстояний выборки: 45 из 98
+layer_note_market_access,2024,README.md,(январь 2023 – декабрь 2024)
+layer_note_market_access,0,README.md,"индекс доступности рынков 2024, 0–1000"
+layer_note_market_access,1000,notebooks/24e_landing_check.md,имеет market_access 1000.0
+layer_note_market_access,2571,notebooks/24e_landing_check.md,МО со значением | 2571
+layer_note_market_access,2594,notebooks/24e_landing_check.md,МО во встроенных данных (layer_data_24f.parquet) | 2594
+layer_note_market_access,23,notebooks/24e_landing_check.md,всего без значения 23 МО
+layer_note_stability,24,README.md,с полной историей за 24 месяца
+layer_note_stability,2024,README.md,(январь 2023 – декабрь 2024)
+layer_note_stability,2004,README.md,Рабочая выборка — 2004 МО
+layer_note_last_month,2024,README.md,(январь 2023 – декабрь 2024)
+layer_note_last_month,31,notebooks/24e_landing_check.md,канонические различаются у МО | 31
+layer_note_last_month,0.9609,notebooks/24e_landing_check.md,(допуск 0.0005) | 0.9609
