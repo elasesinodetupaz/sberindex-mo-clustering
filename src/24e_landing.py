@@ -1920,7 +1920,7 @@ def build_html(ctx: dict) -> tuple[str, dict]:
 <p class="srcnote">Источник: data/geo/ATTRIBUTION.md, текст без изменений.</p>
 <h3>Репозиторий и воспроизведение</h3>
 <ul>
-<li>Репозиторий проекта: sberindex-clustering (адрес публикации в файлах проекта не задан).</li>
+<li>Репозиторий проекта: https://github.com/elasesinodetupaz/sberindex-mo-clustering</li>
 <li>Описание проекта и шагов: <code>README.md</code>; решения и интерпретация: <code>docs/decisions.md</code>, <code>docs/interpretation.md</code>, <code>docs/type_names.md</code>, <code>docs/interpretation_sources.csv</code>.</li>
 <li>Полный прогон: <code>bash run_all.sh</code>; пересборка этой страницы: <code>.venv/bin/python src/24e_landing.py</code>; описание: <code>site/README.md</code>, <code>notebooks/24e_landing_check.md</code>.</li>
 </ul>
